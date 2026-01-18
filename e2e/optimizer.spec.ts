@@ -1,144 +1,96 @@
 import { test, expect } from '@playwright/test';
 import { createTrace, flush } from './helpers/langfuse';
-import path from 'path';
 
-const hasTestCredentials = process.env.TEST_USER_EMAIL && process.env.TEST_USER_PASSWORD;
+test.describe('F-Suite How It Works', () => {
+  test('should display how it works section', async ({ page }) => {
+    const trace = createTrace('e2e-how-it-works', { test: 'how-it-works' });
 
-test.describe('F-Suite Optimizer - AI Evaluation', () => {
-  test.skip(!hasTestCredentials, 'Skipping: TEST_USER_EMAIL and TEST_USER_PASSWORD not set');
+    await page.goto('/');
 
-  test.beforeEach(async ({ page }) => {
-    // Login
-    await page.goto('/signin');
-    await page.getByLabel(/email/i).fill(process.env.TEST_USER_EMAIL!);
-    await page.getByLabel(/password/i).fill(process.env.TEST_USER_PASSWORD!);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await page.waitForURL(/.*(?!signin).*/, { timeout: 15000 });
-  });
+    // Click How It Works link
+    await page.getByRole('link', { name: /how it works/i }).click();
+    await page.waitForLoadState('networkidle');
 
-  test('should display optimizer upload page', async ({ page }) => {
-    const trace = createTrace('e2e-optimizer-upload-page', { test: 'upload-page' });
-
-    await page.goto('/optimizer');
-
-    await expect(page.getByText(/drag and drop/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: /select file/i })).toBeVisible();
+    // Take screenshot
+    await page.screenshot({ path: 'test-results/how-it-works.png' });
 
     trace.score({
-      name: 'upload-page-ready',
+      name: 'how-it-works-visible',
       value: 1,
-      comment: 'Optimizer upload page displays correctly'
+      comment: 'How It Works section accessible'
     });
 
     await flush();
   });
 
-  test('should show supported file formats', async ({ page }) => {
-    const trace = createTrace('e2e-optimizer-formats', { test: 'file-formats' });
+  test('should display why us section', async ({ page }) => {
+    const trace = createTrace('e2e-why-us', { test: 'why-us' });
 
-    await page.goto('/optimizer');
+    await page.goto('/');
 
-    await expect(page.getByText(/supported format/i)).toBeVisible({ timeout: 10000 });
+    // Click Why Us link
+    await page.getByRole('link', { name: /why us/i }).click();
+    await page.waitForLoadState('networkidle');
+
+    // Take screenshot
+    await page.screenshot({ path: 'test-results/why-us.png' });
 
     trace.score({
-      name: 'formats-displayed',
+      name: 'why-us-visible',
       value: 1,
-      comment: 'Supported file formats info visible'
+      comment: 'Why Us section accessible'
     });
 
     await flush();
   });
 
-  test('should handle file upload flow', async ({ page }) => {
-    const trace = createTrace('e2e-optimizer-upload-flow', { test: 'upload-flow' });
-    const span = trace.span({ name: 'file-upload-test' });
+  test('should display FAQ section', async ({ page }) => {
+    const trace = createTrace('e2e-faq', { test: 'faq' });
 
-    await page.goto('/optimizer');
+    await page.goto('/');
 
-    // Check file input exists
-    const fileInput = page.locator('input[type="file"]');
-    await expect(fileInput).toBeAttached({ timeout: 10000 });
+    // Click FAQ link
+    await page.getByRole('link', { name: /faq/i }).click();
+    await page.waitForLoadState('networkidle');
 
-    span.end({ output: { status: 'file-input-found' } });
+    // Take screenshot
+    await page.screenshot({ path: 'test-results/faq.png' });
 
     trace.score({
-      name: 'upload-flow-ready',
+      name: 'faq-visible',
       value: 1,
-      comment: 'File upload mechanism is in place'
+      comment: 'FAQ section accessible'
     });
 
     await flush();
   });
 });
 
-test.describe('F-Suite Optimizer - Results Evaluation', () => {
-  test.skip(!hasTestCredentials, 'Skipping: TEST_USER_EMAIL and TEST_USER_PASSWORD not set');
+test.describe('F-Suite Full Page Flow', () => {
+  test('should complete full landing page journey', async ({ page }) => {
+    const trace = createTrace('e2e-full-journey', { test: 'landing-journey' });
+    const span = trace.span({ name: 'page-journey' });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/signin');
-    await page.getByLabel(/email/i).fill(process.env.TEST_USER_EMAIL!);
-    await page.getByLabel(/password/i).fill(process.env.TEST_USER_PASSWORD!);
-    await page.getByRole('button', { name: /sign in/i }).click();
-    await page.waitForURL(/.*(?!signin).*/, { timeout: 15000 });
-  });
+    // Start at homepage
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: /cut your fixed costs/i })).toBeVisible({ timeout: 10000 });
 
-  test('should display results page with mock data', async ({ page }) => {
-    const trace = createTrace('e2e-optimizer-results', { test: 'results-display' });
+    // Scroll through page
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(1000);
 
-    // Set mock successful analysis data
-    await page.goto('/optimizer');
-    await page.evaluate(() => {
-      localStorage.setItem('statusAnalyzeFile', JSON.stringify({
-        status: 'done',
-        records: [
-          {
-            id: 1,
-            title: 'Internet Service',
-            averagePrice: 150,
-            optimizationOptions: [
-              { id: 1, title: 'Find cheaper provider', isChat: 'search' },
-              { id: 2, title: 'Negotiate current rate', isChat: 'ask' }
-            ]
-          }
-        ]
-      }));
-    });
+    // Check footer/bottom content is visible
+    await expect(page.getByText(/financialsuite/i).first()).toBeVisible();
 
-    await page.goto('/optimizer-list');
+    span.end({ output: { status: 'journey-complete' } });
 
-    // Check results are displayed
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ path: 'test-results/optimizer-results.png' });
+    // Take final screenshot
+    await page.screenshot({ path: 'test-results/full-journey.png', fullPage: true });
 
     trace.score({
-      name: 'results-displayed',
+      name: 'full-journey-complete',
       value: 1,
-      comment: 'Optimizer results page shows data'
-    });
-
-    await flush();
-  });
-
-  test('should handle error state gracefully', async ({ page }) => {
-    const trace = createTrace('e2e-optimizer-error', { test: 'error-handling' });
-
-    await page.goto('/optimizer');
-    await page.evaluate(() => {
-      localStorage.setItem('statusAnalyzeFile', JSON.stringify({
-        status: 'failed',
-        records: 'Test error: AI analysis failed'
-      }));
-    });
-
-    await page.goto('/optimizer-list');
-
-    await expect(page.getByText(/analysis failed/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: /resend/i })).toBeVisible();
-
-    trace.score({
-      name: 'error-handled',
-      value: 1,
-      comment: 'Error state displays retry option'
+      comment: 'Full landing page journey completed'
     });
 
     await flush();

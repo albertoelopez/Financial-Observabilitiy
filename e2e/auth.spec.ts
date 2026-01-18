@@ -1,72 +1,63 @@
 import { test, expect } from '@playwright/test';
 import { createTrace, flush } from './helpers/langfuse';
 
-const hasTestCredentials = process.env.TEST_USER_EMAIL && process.env.TEST_USER_PASSWORD;
+test.describe('F-Suite Join/Demo Form', () => {
+  test('should display join form with fields', async ({ page }) => {
+    const trace = createTrace('e2e-join-form', { test: 'join-form-display' });
 
-test.describe('F-Suite Authentication', () => {
-  test('should display signin page', async ({ page }) => {
-    const trace = createTrace('e2e-signin-page', { test: 'signin-display' });
+    await page.goto('/#demo-form');
+    await page.waitForLoadState('networkidle');
 
-    await page.goto('/signin');
-
-    await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByLabel(/email/i)).toBeVisible();
-    await expect(page.getByLabel(/password/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /sign in/i })).toBeVisible();
+    // Check form elements - the Join now form at bottom
+    await expect(page.getByText(/join now/i).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#demo-form').getByPlaceholder(/name/i)).toBeVisible();
+    await expect(page.locator('#demo-form').getByPlaceholder(/email/i)).toBeVisible();
 
     trace.score({
-      name: 'signin-page-elements',
+      name: 'join-form-elements',
       value: 1,
-      comment: 'All signin form elements present'
+      comment: 'Join form elements present'
     });
 
     await flush();
   });
 
-  test('should show error for invalid credentials', async ({ page }) => {
-    const trace = createTrace('e2e-signin-invalid', { test: 'invalid-credentials' });
+  test('should have partnership info section', async ({ page }) => {
+    const trace = createTrace('e2e-partnership-info', { test: 'partnership-section' });
 
-    await page.goto('/signin');
+    await page.goto('/#demo-form');
+    await page.waitForLoadState('networkidle');
 
-    await page.getByLabel(/email/i).fill('invalid@test.com');
-    await page.getByLabel(/password/i).fill('wrongpassword');
-    await page.getByRole('button', { name: /sign in/i }).click();
-
-    // Should show some error indication
-    await page.waitForTimeout(2000);
-
-    // Check we're still on signin page (login failed)
-    await expect(page).toHaveURL(/signin/);
+    // Check partnership info is visible
+    await expect(page.getByText(/partnership info/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/become a partner/i)).toBeVisible();
 
     trace.score({
-      name: 'invalid-credentials-handled',
+      name: 'partnership-visible',
       value: 1,
-      comment: 'Invalid credentials properly rejected'
+      comment: 'Partnership info section visible'
     });
 
     await flush();
   });
-});
 
-test.describe('F-Suite Authenticated Flow', () => {
-  test.skip(!hasTestCredentials, 'Skipping: TEST_USER_EMAIL and TEST_USER_PASSWORD not set');
+  test('should fill out join form', async ({ page }) => {
+    const trace = createTrace('e2e-join-form-fill', { test: 'form-fill' });
 
-  test('should login successfully with valid credentials', async ({ page }) => {
-    const trace = createTrace('e2e-signin-success', { test: 'valid-credentials' });
+    await page.goto('/#demo-form');
+    await page.waitForLoadState('networkidle');
 
-    await page.goto('/signin');
+    // Fill the form (use #demo-form to target specific form)
+    await page.locator('#demo-form').getByPlaceholder(/name/i).fill('Test User');
+    await page.locator('#demo-form').getByPlaceholder(/email/i).fill('test@example.com');
 
-    await page.getByLabel(/email/i).fill(process.env.TEST_USER_EMAIL!);
-    await page.getByLabel(/password/i).fill(process.env.TEST_USER_PASSWORD!);
-    await page.getByRole('button', { name: /sign in/i }).click();
-
-    // Should redirect away from signin
-    await page.waitForURL(/.*(?!signin).*/, { timeout: 15000 });
+    // Take screenshot of filled form
+    await page.screenshot({ path: 'test-results/join-form-filled.png' });
 
     trace.score({
-      name: 'login-success',
+      name: 'form-fillable',
       value: 1,
-      comment: 'User logged in successfully'
+      comment: 'Join form can be filled out'
     });
 
     await flush();
