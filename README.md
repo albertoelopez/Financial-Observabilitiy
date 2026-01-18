@@ -1,6 +1,6 @@
 # Financial Observability
 
-Langfuse-powered evals and E2E tests for [Financial Suite](https://f-suite.com).
+Langfuse-powered evals and E2E testing framework.
 
 ## Setup
 
